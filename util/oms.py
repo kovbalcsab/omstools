@@ -230,6 +230,117 @@ def get_by_array(var, array, category):
     u.progressbars_summary(len(array))
     
     return datas
+
+def get_by_filter(category, filters = None, customs = None, attrs = None, sort = None, per_page = 100):
+    q = omsapi.query(category)
+    q.set_verbose(False)
+    q.set_validation(False)
+    q.paginate(per_page = per_page)
+
+    if attrs:
+        q.attrs(attrs)
+
+    if sort:
+        if isinstance(sort, str):
+            q.sort(sort)
+        else:
+            q.sort(sort[0], asc = sort[1])
+
+    if customs:
+        for c in customs:
+            q.custom(c[0], c[1])
+
+    if filters:
+        for f in filters:
+            q.filter(f[0], f[1], f[2])
+
+    datas = []
+    ipage = 1
+    while True:
+        u.progressbars()
+        q.paginate(page = ipage, per_page = per_page)
+        qjson = q.data().json()
+        data = qjson.get("data", [])
+        datas.extend(data)
+        links = qjson.get("links", {})
+        if not data or links.get("next") is None:
+            break
+        ipage = ipage+1
+    u.progressbars_summary(ipage)
+
+    return datas
+
+def get_fill_info(fill, verbose = False, category = "filldetailx"):
+    data = get_by_filter(category,
+                         filters = [["fill_number", fill, "EQ"]],
+                         per_page = 100)
+    if not data:
+        print("\033[31merror: fill number: \"\033[4m" + str(fill) + "\033[0m\033[31m\", skip it..\033[0m")
+        return None
+
+    fillinfo = data[0]
+    if verbose:
+        print(fillinfo)
+
+    return fillinfo
+
+def get_fill_time_range(fill):
+    fillinfo = get_fill_info(fill)
+    if fillinfo:
+        attr = fillinfo["attributes"]
+        start_keys = ["start_time", "start_stable_beam_time", "stable_beams_start_time", "stable_beams_start"]
+        end_keys = ["end_time", "end_stable_beam_time", "stable_beams_end_time", "stable_beams_end"]
+        start_time = None
+        end_time = None
+        for key in start_keys:
+            if key in attr and attr[key]:
+                start_time = attr[key]
+                break
+        for key in end_keys:
+            if key in attr and attr[key]:
+                end_time = attr[key]
+                break
+        if start_time and end_time:
+            return start_time, end_time
+
+    runs = get_by_filter("runs",
+                         filters = [["fill_number", fill, "EQ"]],
+                         sort = "start_time",
+                         per_page = 100)
+    start_time = None
+    end_time = None
+    for run in runs:
+        attr = run["attributes"]
+        if attr["start_time"] and (start_time is None or attr["start_time"] < start_time):
+            start_time = attr["start_time"]
+        if attr["end_time"] and (end_time is None or attr["end_time"] > end_time):
+            end_time = attr["end_time"]
+
+    if start_time and end_time:
+        return start_time, end_time
+
+    return None, None
+
+def get_bunch_info_by_fill(fill):
+    # Keep the page size conservative and rely on pagination so we never depend
+    # on the server honoring an oversized single-page request.
+    return get_by_filter("bunches",
+                         filters = [["fill_number", fill, "EQ"]],
+                         attrs = ["bunch_number", "peak_lumi", "intensity_beam_1", "intensity_beam_2", "pileup"],
+                         sort = "bunch_number",
+                         per_page = 500)
+
+def get_bunch_info_by_run(run):
+    runinfo = get_run_info(str(run), False)
+    if runinfo is None:
+        return None, []
+
+    fill = runinfo["attributes"].get("fill_number")
+    if fill is None:
+        print("\033[31merror: no fill number found for run \"\033[4m" + str(run) + "\033[0m\033[31m\"\033[0m")
+        return runinfo, []
+
+    return runinfo, get_bunch_info_by_fill(fill)
     
 def get_rate_by_runls(run, ls = None, category = "hlt", path = None):
     if "hlt" in category:

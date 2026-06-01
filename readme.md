@@ -2,6 +2,7 @@
 
 * [Install](#install)
 * [Usage](#usage)
+    - [fillbunchinfo.py](#fillbunchinfopy): Bunch-resolved fill information from OMS
     - [ratevsls.py](#ratevsls): Draw rate vs inst lumi
     - [hltcount.py](#hltcountpy): HLT counts in given lumi section ranges of time range
     - [ratetable.py](#ratetablepy): HLT/L1 rates/counts comparison between run or lumi sections
@@ -33,6 +34,25 @@ CLIENT_SECRET = 'example_secret'
 ```
 
 ## Usage
+### `fillbunchinfo.py`
+* Download bunch information for a run as CSV
+* Input: run number
+* OMS behavior: resolve `run -> fill_number`, then query `bunches`
+* CSV columns: `bunch_number,peak_lumi,intensity_beam_1,intensity_beam_2,pileup`
+```
+usage: fillbunchinfo.py [-h] --run RUN [--outcsv OUTCSV]
+
+options:
+  -h, --help       show this help message and exit
+  --run RUN        one run number
+  --outcsv OUTCSV  Optional csv output file
+```
+* Example
+    - Command
+    ```
+    python3 fillbunchinfo.py --run 373710
+    ```
+
 ### `ratevsls.py`
 * HLT paths or L1 rates or counts for a given set of runs/lumi sections
 ```

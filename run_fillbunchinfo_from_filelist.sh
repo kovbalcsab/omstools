@@ -105,11 +105,21 @@ if [[ -n "$RUNLIST_OUT" ]]; then
   cp "$TEMP_RUNLIST" "$RUNLIST_OUT"
 fi
 
+FAILED_RUNS=()
+
 while IFS= read -r RUN; do
   [[ -z "$RUN" ]] && continue
   OUTPUT_FILE="$OUTPUT_DIR/fillbunchinfo_run${RUN}.csv"
   echo "Downloading fill bunch info for run $RUN -> $OUTPUT_FILE"
-  python3 fillbunchinfo.py --run "$RUN" --outcsv "$OUTPUT_FILE"
+  if ! python3 fillbunchinfo.py --run "$RUN" --outcsv "$OUTPUT_FILE"; then
+    echo "warning: failed to download fill bunch info for run $RUN" >&2
+    FAILED_RUNS+=("$RUN")
+  fi
 done < "$TEMP_RUNLIST"
+
+if [[ ${#FAILED_RUNS[@]} -gt 0 ]]; then
+  echo "Completed with ${#FAILED_RUNS[@]} failed run(s): ${FAILED_RUNS[*]}" >&2
+  exit 1
+fi
 
 echo "Finished writing per-run filling scheme CSV files to $OUTPUT_DIR"

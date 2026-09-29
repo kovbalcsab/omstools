@@ -6,6 +6,7 @@
     - [ratevsls.py](#ratevsls): Draw rate vs inst lumi
     - [hltcount.py](#hltcountpy): HLT counts in given lumi section ranges of time range
     - [ratetable.py](#ratetablepy): HLT/L1 rates/counts comparison between run or lumi sections
+    - [instlumi.py](#instlumipy): Instantaneous luminosity for run-lumisection pairs from a text file
 
 ## Install
 ```
@@ -200,4 +201,35 @@ options:
     | L1_SingleJet60                         |       0.856 |      74.919 |      71.726 |
     ------------------------------------------------------------------------------------
     ```
-    
+
+### `instlumi.py`
+* Instantaneous luminosity for run-lumisection pairs listed in a text file
+* Input: a text file with `<run> <ls>` per line (e.g. the output of a "list run/ls" ROOT macro)
+* Groups pairs by run, queries `lumisections` once per run, and writes only the requested pairs
+* CSV columns: `run, ls, init_lumi, end_lumi, avg_lumi, delivered_lumi, recorded_lumi, beams_stable`, sorted by run then ls (`avg_lumi` is `(init_lumi+end_lumi)/2`, in units of 10^33 cm^-2 s^-1)
+```
+usage: instlumi.py [-h] --inputtxt INPUTTXT [--outcsv OUTCSV]
+
+options:
+  -h, --help           show this help message and exit
+  --inputtxt INPUTTXT  Text file with "run lumi" pairs, one per line (e.g. output of runlumi_list.exe)
+  --outcsv OUTCSV      Optional csv output file
+```
+* Example
+    - Command
+    ```
+    python3 instlumi.py --inputtxt runlumi_HIForward0.txt
+    ```
+    - Screen
+    ```
+    12 runs, 31320 run-lumi pairs requested.
+
+    Write to output file: outcsv/instlumi.csv
+    ...
+    31320/31320 run-lumi pairs found.
+    ```
+    - CSV is sorted by run then ls, so a given run/ls pair can be found directly, e.g.
+    ```
+    grep "^399465, 40," outcsv/instlumi.csv
+    ```
+
